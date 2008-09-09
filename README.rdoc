@@ -241,6 +241,23 @@ When integrating with other classes, behind the scenes, Workflow sets up a Proxy
   
 So just incase you screw something up (like I did while testing this library), it'll give you a useful message.
 
+You can define multiple events of the same name, for example if you wish to transition to different states depending on conditions. The nicer way to have done this may well have been to have it as an array with a conditions hash, or proc, or something else! I've done it this way to keep it consistent with the feel of the rest of the plugin..
+
+Take this state definition (taken from my additional workflow authorization class for restful_authentication):
+
+  state :suspended do
+    event :delete, :transitions_to => :deleted
+    event :unsuspend, :transitions_to => :active do
+      fall_through if activated_at.blank?
+    end
+    event :unsuspend, :transitions_to => :pending do
+      fall_through if activation_code.blank?
+    end
+    event :unsuspend, :transitions_to => :passive
+  end
+
+When a user is in the suspended state then the unsuspend event needs to return them to the correct state. In the case where multiple events of the same name exist for a given state then they are executed in the order in which they appear. In this example, the first event will transition from :suspended to :active - unless the condition for fall_through is met. If the fall_through condition is met, execution drops through to the next event without any transition occuring. You can also still use halt - where halt is used no further events will be processed and the halted_because result will be the first and only reason for halting. If you keep falling_through without a catch-all then no transition will occur.
+
 You can blatter existing workflows, by simply opening them up again (similar to how Ruby works!).
 
   Workflow.specify 'Blatter' do
@@ -276,6 +293,6 @@ You can blatter existing workflows, by simply opening them up again (similar to 
 
 Why can we do this? Well, we needed it for our production app, so there.
   
-And that's about it. A update to the implementation may allow multiple workflows per instance of a class or ActiveRecord, but we haven't figured out if that's required or appropriate.
+And that's about it. A update to the implementation may allow multiple workflows per instance of a class or ActiveRecord, but we haven't figured out if that's required or appropriate
 
 Ryan Allen, March 2008.

@@ -220,24 +220,33 @@ module Workflow
     end
     
     def process_event!(name, *args)
-      event = current_state.events(name)
+      events = current_state.events(name)
+      
       @halted_because = nil
       @halted = false
       @raise_exception_on_halt = false
-      # i don't think we've tested that the return value is
-      # what the action returns... so yeah, test it, at some point.
-      return_value = run_action(event.action, *args)
-      if @halted
-        if @raise_exception_on_halt
-          raise TransitionHalted.new(@halted_because)
+      return_value = nil
+            
+      events.each do |event|
+        @fall_through = false
+        
+        return_value = run_action(event.action, *args)
+        
+        if @halted
+          if @raise_exception_on_halt
+            raise TransitionHalted.new(@halted_because)
+          else
+            false
+          end
         else
-          false
+          unless @fall_through
+            run_on_transition(current_state, states(event.transitions_to), name, *args)
+            transition(current_state, states(event.transitions_to), name, *args)
+            break
+          end
         end
-      else
-        run_on_transition(current_state, states(event.transitions_to), name, *args)
-        transition(current_state, states(event.transitions_to), name, *args)
-        return_value
       end
+      return_value
     end
     
     def halt(reason = nil)
@@ -250,6 +259,10 @@ module Workflow
       @halted_because = reason
       @halted = true
       @raise_exception_on_halt = true
+    end
+    
+    def fall_through(value = true)
+      @fall_through = true
     end
         
     def transition(from, to, name, *args)
@@ -290,9 +303,9 @@ module Workflow
     
     def events(name = nil)
       if name
-        @events.detect { |e| e.name == name }
+        @events.find_all { |e| e.name == name }
       else
-        @events.collect { |e| e.name }
+        @events.collect { |e| e.name }.uniq
       end
     end
     

@@ -33,7 +33,11 @@ module Workflow
       # add a meta method
       receiver.instance_eval do
         def workflow(&specification)
-          Workflow.specify(self, &specification)
+          @workflow = Workflow.specify(self, &specification)
+        end
+        
+        def workflow_states
+          @workflow.states.collect(&:name)
         end
       end
       # this should check the inheritance tree, as subclassed models

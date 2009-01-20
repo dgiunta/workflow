@@ -173,7 +173,7 @@ module Workflow
     end
     
     def method_missing(name, *args)
-      if current_state.events(name)
+      if current_state.events.include?(name)
         process_event!(name, *args)
       elsif name.to_s[-1].chr == '?' and states(name.to_s[0..-2].to_sym)
         current_state == states(name.to_s[0..-2].to_sym)

@@ -57,7 +57,8 @@ module Workflow
             @workflow = if workflow_state.nil?
               Workflow.new(self.class)
             else
-              Workflow.reconstitute(workflow_state.to_sym, self.class)
+              name = self.class.send("class_name_of_active_record_descendant", self.class)
+              Workflow.reconstitute(workflow_state.to_sym, name.constantize)
             end
             @workflow.bind_to(self)
           end
